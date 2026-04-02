@@ -62,10 +62,18 @@ export default function EmployeeView() {
   function handleLastName(val) { setLastName(capitalize(val)) }
 
   function toggleShift(day, shiftKey) {
-    setSelections(prev => ({
-      ...prev,
-      [day]: { ...prev[day], [shiftKey]: !prev[day][shiftKey] }
-    }))
+    setSelections(prev => {
+      const current = prev[day] || { s24: false, am: false, pm: false }
+      const alreadySelected = current[shiftKey]
+      return {
+        ...prev,
+        [day]: {
+          s24: !alreadySelected && shiftKey === 's24',
+          am:  !alreadySelected && shiftKey === 'am',
+          pm:  !alreadySelected && shiftKey === 'pm',
+        }
+      }
+    })
   }
 
   function selectAllRotation(rotation) {
@@ -115,7 +123,6 @@ export default function EmployeeView() {
   return (
     <div className={styles.view}>
 
-      {/* Name + Month */}
       <div className={styles.topRow}>
         <div className={styles.nameRow}>
           <div className={styles.field}>
@@ -151,7 +158,6 @@ export default function EmployeeView() {
 
       {loadingPrev && <div className={styles.loadingNote}>Loading your previous submission…</div>}
 
-      {/* Calendar header */}
       <div className={styles.calHeader}>
         <div>
           <div className={styles.label}>Select your available shifts</div>
@@ -184,7 +190,6 @@ export default function EmployeeView() {
         </div>
       </div>
 
-      {/* Calendar grid */}
       <div className={styles.calendar}>
         {DAYS_OF_WEEK.map(d => <div key={d} className={styles.dayHeader}>{d}</div>)}
         {Array.from({ length: startDay }, (_, i) => (
@@ -216,7 +221,6 @@ export default function EmployeeView() {
         })}
       </div>
 
-      {/* Footer — name confirmation + submit */}
       <div className={styles.footer}>
         <div className={styles.footerLeft}>
           {firstName.trim() && lastName.trim() && (
