@@ -1,0 +1,72 @@
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  background: linear-gradient(180deg, #0e1a0e 0%, var(--surface) 100%);
+}
+
+.logoWrap {
+  flex-shrink: 0;
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--lime-dim);
+  box-shadow: 0 0 12px rgba(163,204,0,0.15);
+}
+
+.logo {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.text { flex: 1; }
+
+.deptLine { display: flex; align-items: baseline; gap: 8px; }
+
+.town {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.text h1 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 20px; font-weight: 700; letter-spacing: 0.5px;
+  color: var(--lime); text-transform: uppercase;
+}
+
+.text p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* Blue stripe — matches the truck stripe */
+.stripe {
+  height: 4px;
+  background: linear-gradient(90deg, var(--blue) 0%, #2272d0 50%, var(--blue) 100%);
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  flex: 1; padding: 11px 16px;
+  background: none; border: none;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+  color: var(--muted); text-transform: uppercase;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab.active { color: var(--lime); border-bottom-color: var(--lime); }
+.tab:hover:not(.active) { color: var(--text); }
