@@ -4,8 +4,10 @@
   display: grid; grid-template-columns: 2fr 1fr;
   gap: 16px; margin-bottom: 8px; align-items: end;
 }
+@media (max-width: 560px) { .topRow { grid-template-columns: 1fr; } }
 
 .nameRow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 360px) { .nameRow { grid-template-columns: 1fr; } }
 
 .namePreview {
   font-size: 13px; color: var(--muted);
@@ -14,7 +16,6 @@
   border-radius: 6px; border-left: 3px solid var(--lime-dim);
 }
 .namePreview strong { color: var(--lime-text); font-weight: 600; }
-@media (max-width: 500px) { .topRow { grid-template-columns: 1fr; } }
 
 .field { display: flex; flex-direction: column; gap: 6px; }
 
@@ -23,18 +24,6 @@
   font-size: 11px; font-weight: 600; letter-spacing: 1.2px;
   text-transform: uppercase; color: var(--muted);
 }
-
-.nameWrap { position: relative; }
-.suggestions {
-  position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
-  background: var(--surface2); border: 1px solid var(--border2); border-top: none;
-  border-radius: 0 0 6px 6px; overflow: hidden;
-}
-.suggestion {
-  padding: 9px 12px; font-size: 14px; cursor: pointer; color: var(--text);
-  transition: background 0.1s;
-}
-.suggestion:hover { background: var(--border2); }
 
 .loadingNote { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
 
@@ -51,7 +40,19 @@
 }
 .legendDesc { font-weight: 400; font-size: 11px; opacity: 0.75; }
 
+.rotationLegend {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 8px; flex-wrap: wrap;
+}
+.rotationLegendLabel {
+  font-size: 11px; color: var(--muted);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+}
+.rotationLegendNote { font-size: 11px; color: var(--hint); }
+
 .quickActions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
 .quickBtn {
   font-size: 11px; padding: 5px 10px; border-radius: 5px;
   background: var(--surface); border: 1px solid var(--border);
@@ -59,20 +60,15 @@
 }
 .quickBtn:hover { color: var(--text); border-color: var(--border2); }
 
-.quickBtnA {
-  border-color: #4a3600 !important; color: #c8a030 !important;
-}
+.quickBtnA { border-color: #4a3600 !important; color: #c8a030 !important; }
 .quickBtnA:hover { background: #2a1e00 !important; border-color: #6a5000 !important; }
 
-.quickBtnB {
-  border-color: var(--s24-on-brd) !important; color: var(--s24-on-txt) !important;
-}
+.quickBtnB { border-color: var(--s24-on-brd) !important; color: var(--s24-on-txt) !important; }
 .quickBtnB:hover { background: var(--s24-on-bg) !important; }
 
-.quickBtnC {
-  border-color: var(--am-on-brd) !important; color: var(--am-on-txt) !important;
-}
+.quickBtnC { border-color: var(--am-on-brd) !important; color: var(--am-on-txt) !important; }
 .quickBtnC:hover { background: var(--am-on-bg) !important; }
+
 .quickBtnDanger {
   font-size: 11px; padding: 5px 10px; border-radius: 5px;
   background: var(--surface); border: 1px solid #2a1010;
@@ -80,7 +76,6 @@
 }
 .quickBtnDanger:hover { color: var(--danger); border-color: #5a2020; }
 
-/* Calendar */
 .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
 
 .dayHeader {
@@ -99,24 +94,13 @@
 .dayCell:hover { border-color: var(--border2); }
 
 .dayCellTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 4px;
 }
 
 .dayNum { font-size: 12px; font-weight: 500; color: #b8c8b4; }
 
-.rotationLegend {
-  display: flex; align-items: center; gap: 6px;
-  margin-top: 8px; flex-wrap: wrap;
-}
-.rotationLegendLabel {
-  font-size: 11px; color: var(--muted);
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
-}
-.rotationLegendNote { font-size: 11px; color: var(--hint); }
+.rotationBadge {
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 10px; font-weight: 700;
   width: 16px; height: 16px;
@@ -125,11 +109,8 @@
   letter-spacing: 0;
 }
 
-/* A = amber/gold */
 .rotationA { background: #2a1e00; color: #c8a030; border: 1px solid #4a3600; }
-/* B = blue */
 .rotationB { background: var(--s24-on-bg); color: var(--s24-on-txt); border: 1px solid var(--s24-on-brd); }
-/* C = lime */
 .rotationC { background: var(--am-on-bg); color: var(--am-on-txt); border: 1px solid var(--am-on-brd); }
 
 .shiftBtns { display: flex; flex-direction: column; gap: 3px; }
@@ -138,23 +119,16 @@
   font-size: 9px; font-weight: 600; letter-spacing: 0.3px;
   border-radius: 3px; padding: 2px 3px;
   cursor: pointer; transition: all 0.1s; text-transform: uppercase;
-  font-family: 'Barlow Condensed', sans-serif;
-  width: 100%;
+  font-family: 'Barlow Condensed', sans-serif; width: 100%;
 }
 
-/* 24hr = blue */
 .shift-24 { color: var(--s24-text); border: 1px solid var(--s24-border); background: var(--s24-bg); }
 .shift-24.on { background: var(--s24-on-bg); color: var(--s24-on-txt); border-color: var(--s24-on-brd); }
-
-/* AM = lime green */
 .shift-am { color: var(--am-text); border: 1px solid var(--am-border); background: var(--am-bg); }
 .shift-am.on { background: var(--am-on-bg); color: var(--am-on-txt); border-color: var(--am-on-brd); }
-
-/* PM = blue-dim */
 .shift-pm { color: var(--pm-text); border: 1px solid var(--pm-border); background: var(--pm-bg); }
 .shift-pm.on { background: var(--pm-on-bg); color: var(--pm-on-txt); border-color: var(--pm-on-brd); }
 
-/* Legend badges */
 .legendItem.shift-24 { background: var(--s24-on-bg); color: var(--s24-on-txt); }
 .legendItem.shift-am { background: var(--am-on-bg); color: var(--am-on-txt); }
 .legendItem.shift-pm { background: var(--pm-on-bg); color: var(--pm-on-txt); }
@@ -171,8 +145,7 @@
   background: var(--lime); border: none; border-radius: 6px;
   color: #0a0c08; font-family: 'Barlow Condensed', sans-serif;
   font-size: 15px; font-weight: 700; letter-spacing: 1px;
-  text-transform: uppercase; cursor: pointer;
-  transition: background 0.15s;
+  text-transform: uppercase; cursor: pointer; transition: background 0.15s;
 }
 .submitBtn:hover { background: var(--lime-h); }
 .submitBtn:disabled { background: var(--border2); color: var(--hint); cursor: not-allowed; }
