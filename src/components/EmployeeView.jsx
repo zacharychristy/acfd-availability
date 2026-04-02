@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { monthOptions, currentYM, daysInMonth, firstDayOfWeek, SHIFTS } from '../lib/utils.js'
+import { monthOptions, currentYM, daysInMonth, firstDayOfWeek, SHIFTS, getShiftRotationForYMD } from '../lib/utils.js'
 import { submitAvailability, fetchKnownNames, fetchEmployeeMonth } from '../lib/data.js'
 import { showToast } from './Toast.jsx'
 import styles from './EmployeeView.module.css'
@@ -13,31 +13,40 @@ function buildEmptySelections(ym) {
   return sel
 }
 
+function capitalize(val) {
+  return val
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ')
+}
+
 export default function EmployeeView() {
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [ym, setYm] = useState(currentYM())
   const [selections, setSelections] = useState(() => buildEmptySelections(currentYM()))
   const [knownNames, setKnownNames] = useState([])
-  const [suggestions, setSuggestions] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [loadingPrev, setLoadingPrev] = useState(false)
-  const nameRef = useRef(null)
+
+  // Derived full name — always properly formatted
+  const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ')
 
   useEffect(() => {
     fetchKnownNames().then(setKnownNames)
   }, [])
 
-  // When month changes, reset calendar
+  // Reset calendar when month changes
   useEffect(() => {
     setSelections(buildEmptySelections(ym))
   }, [ym])
 
-  // When name + month both set, pre-fill if prior submission exists
+  // Pre-fill if prior submission exists for this name + month
   useEffect(() => {
-    if (!name.trim()) return
+    if (!fullName) return
     let cancelled = false
     setLoadingPrev(true)
-    fetchEmployeeMonth(name.trim(), ym).then(prev => {
+    fetchEmployeeMonth(fullName, ym).then(prev => {
       if (cancelled) return
       setLoadingPrev(false)
       if (!prev || !Object.keys(prev).length) return
@@ -50,18 +59,14 @@ export default function EmployeeView() {
       })
     })
     return () => { cancelled = true }
-  }, [name, ym])
+  }, [fullName, ym])
 
-  function onNameChange(val) {
-    setName(val)
-    if (!val.trim()) { setSuggestions([]); return }
-    const lower = val.toLowerCase()
-    setSuggestions(knownNames.filter(n => n.toLowerCase().includes(lower) && n.toLowerCase() !== lower).slice(0, 6))
+  function handleFirstName(val) {
+    setFirstName(capitalize(val))
   }
 
-  function pickSuggestion(n) {
-    setName(n)
-    setSuggestions([])
+  function handleLastName(val) {
+    setLastName(capitalize(val))
   }
 
   function toggleShift(day, shiftKey) {
@@ -71,11 +76,14 @@ export default function EmployeeView() {
     }))
   }
 
-  function selectAll(shiftKey) {
+  function selectAllRotation(rotation) {
     setSelections(prev => {
       const next = { ...prev }
-      const anyOff = Object.values(next).some(d => !d[shiftKey])
-      Object.keys(next).forEach(d => { next[d] = { ...next[d], [shiftKey]: anyOff } })
+      const rotationDays = Object.keys(next).filter(d => getShiftRotationForYMD(ym, parseInt(d)) === rotation)
+      const anyOff = rotationDays.some(d => !next[d].s24 || !next[d].am || !next[d].pm)
+      rotationDays.forEach(d => {
+        next[d] = { s24: anyOff, am: anyOff, pm: anyOff }
+      })
       return next
     })
   }
@@ -85,21 +93,22 @@ export default function EmployeeView() {
   }
 
   async function handleSubmit() {
-    if (!name.trim()) { showToast('Please enter your name.', 'error'); return }
+    if (!firstName.trim()) { showToast('Please enter your first name.', 'error'); return }
+    if (!lastName.trim()) { showToast('Please enter your last name.', 'error'); return }
     const hasAny = Object.values(selections).some(d => d.s24 || d.am || d.pm)
     if (!hasAny) { showToast('Please select at least one shift.', 'error'); return }
 
     setSubmitting(true)
-    const { error } = await submitAvailability(name.trim(), ym, selections)
+    const { error } = await submitAvailability(fullName, ym, selections)
     setSubmitting(false)
 
     if (error) {
       console.error(error)
       showToast('Submission failed — please try again.', 'error')
     } else {
-      showToast(`Availability submitted for ${name.trim()}!`)
-      if (!knownNames.includes(name.trim())) {
-        setKnownNames(prev => [...prev, name.trim()].sort())
+      showToast(`Availability submitted for ${fullName}!`)
+      if (!knownNames.includes(fullName)) {
+        setKnownNames(prev => [...prev, fullName].sort())
       }
     }
   }
@@ -107,32 +116,35 @@ export default function EmployeeView() {
   const total = daysInMonth(ym)
   const startDay = firstDayOfWeek(ym)
   const opts = monthOptions()
-
   const selectedCount = Object.values(selections).filter(d => d.s24 || d.am || d.pm).length
 
   return (
     <div className={styles.view}>
 
+      {/* Name + Month row */}
       <div className={styles.topRow}>
-        <div className={styles.field}>
-          <label className={styles.label}>Your name</label>
-          <div className={styles.nameWrap}>
+        <div className={styles.nameRow}>
+          <div className={styles.field}>
+            <label className={styles.label}>First name</label>
             <input
-              ref={nameRef}
               type="text"
-              value={name}
-              onChange={e => onNameChange(e.target.value)}
-              onBlur={() => setTimeout(() => setSuggestions([]), 150)}
-              placeholder="First and last name..."
-              autoComplete="off"
+              value={firstName}
+              onChange={e => handleFirstName(e.target.value)}
+              placeholder="John"
+              autoComplete="given-name"
+              autoCapitalize="words"
             />
-            {suggestions.length > 0 && (
-              <div className={styles.suggestions}>
-                {suggestions.map(n => (
-                  <div key={n} className={styles.suggestion} onMouseDown={() => pickSuggestion(n)}>{n}</div>
-                ))}
-              </div>
-            )}
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label}>Last name</label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={e => handleLastName(e.target.value)}
+              placeholder="Smith"
+              autoComplete="family-name"
+              autoCapitalize="words"
+            />
           </div>
         </div>
 
@@ -146,8 +158,16 @@ export default function EmployeeView() {
         </div>
       </div>
 
+      {/* Name preview — shows formatted full name once both fields filled */}
+      {firstName.trim() && lastName.trim() && (
+        <div className={styles.namePreview}>
+          Submitting as <strong>{fullName}</strong>
+        </div>
+      )}
+
       {loadingPrev && <div className={styles.loadingNote}>Loading your previous submission…</div>}
 
+      {/* Calendar header */}
       <div className={styles.calHeader}>
         <div>
           <div className={styles.label}>Select your available shifts</div>
@@ -158,17 +178,29 @@ export default function EmployeeView() {
               </span>
             ))}
           </div>
+          <div className={styles.rotationLegend}>
+            <span className={styles.rotationLegendLabel}>Shift rotation:</span>
+            <span className={`${styles.rotationBadge} ${styles.rotationA}`}>A</span>
+            <span className={`${styles.rotationBadge} ${styles.rotationB}`}>B</span>
+            <span className={`${styles.rotationBadge} ${styles.rotationC}`}>C</span>
+            <span className={styles.rotationLegendNote}>shown on each date for reference</span>
+          </div>
         </div>
         <div className={styles.quickActions}>
-          {SHIFTS.map(s => (
-            <button key={s.key} className={styles.quickBtn} onClick={() => selectAll(s.key)}>
-              Toggle all {s.short}
+          {['A', 'B', 'C'].map(rot => (
+            <button
+              key={rot}
+              className={`${styles.quickBtn} ${styles['quickBtn' + rot]}`}
+              onClick={() => selectAllRotation(rot)}
+            >
+              Toggle all {rot}-shifts
             </button>
           ))}
           <button className={styles.quickBtnDanger} onClick={clearAll}>Clear all</button>
         </div>
       </div>
 
+      {/* Calendar grid */}
       <div className={styles.calendar}>
         {DAYS_OF_WEEK.map(d => <div key={d} className={styles.dayHeader}>{d}</div>)}
 
@@ -179,9 +211,13 @@ export default function EmployeeView() {
         {Array.from({ length: total }, (_, i) => {
           const day = i + 1
           const sel = selections[day] || { s24: false, am: false, pm: false }
+          const rotation = getShiftRotationForYMD(ym, day)
           return (
             <div key={day} className={styles.dayCell}>
-              <div className={styles.dayNum}>{day}</div>
+              <div className={styles.dayCellTop}>
+                <div className={styles.dayNum}>{day}</div>
+                <div className={`${styles.rotationBadge} ${styles['rotation' + rotation]}`}>{rotation}</div>
+              </div>
               <div className={styles.shiftBtns}>
                 {SHIFTS.map(s => (
                   <button
@@ -198,6 +234,7 @@ export default function EmployeeView() {
         })}
       </div>
 
+      {/* Footer */}
       <div className={styles.footer}>
         <span className={styles.countNote}>
           {selectedCount > 0 ? `${selectedCount} day${selectedCount !== 1 ? 's' : ''} selected` : 'No days selected yet'}

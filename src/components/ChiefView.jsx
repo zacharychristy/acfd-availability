@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { monthOptions, currentYM, daysInMonth, firstDayOfWeek, monthLabel, SHIFTS } from '../lib/utils.js'
+import { monthOptions, currentYM, daysInMonth, firstDayOfWeek, monthLabel, SHIFTS, getShiftRotationForYMD } from '../lib/utils.js'
 import { fetchMonthAvailability } from '../lib/data.js'
 import styles from './ChiefView.module.css'
 
@@ -10,6 +10,9 @@ const SHIFT_OPTS = [
   { val: 'pm',  label: 'PM  (7pm – 7am)' },
 ]
 
+const shiftBadge = { s24: 'badge24', am: 'badgeAm', pm: 'badgePm' }
+const shiftLabel = { s24: '24-hr', am: 'AM', pm: 'PM' }
+
 export default function ChiefView() {
   const [ym, setYm] = useState(currentYM())
   const [day, setDay] = useState('')
@@ -19,6 +22,7 @@ export default function ChiefView() {
 
   useEffect(() => {
     setLoading(true)
+    setDay('')
     fetchMonthAvailability(ym).then(({ data }) => {
       setMonthData(data || {})
       setLoading(false)
@@ -27,98 +31,57 @@ export default function ChiefView() {
 
   const opts = monthOptions()
   const total = daysInMonth(ym)
-  const dayOpts = [{ val: '', label: '— all days —' }]
-  for (let d = 1; d <= total; d++) dayOpts.push({ val: String(d), label: String(d) })
+  const uniqueEmployees = new Set(Object.keys(monthData)).size
 
-  // Build result rows
+  // Build result rows only when a day is selected
   const rows = []
-  const daysToCheck = day ? [parseInt(day)] : Array.from({ length: total }, (_, i) => i + 1)
-
-  for (const d of daysToCheck) {
+  if (day) {
+    const d = parseInt(day)
     for (const [empName, days] of Object.entries(monthData)) {
       if (!days[d]) continue
-      const dayShifts = days[d]
       const matchedShifts = SHIFTS.filter(s => {
         if (shift && s.key !== shift) return false
-        return dayShifts[s.key]
+        return days[d][s.key]
       })
-      if (matchedShifts.length) rows.push({ name: empName, day: d, shifts: matchedShifts })
+      if (matchedShifts.length) rows.push({ name: empName, shifts: matchedShifts })
     }
+    rows.sort((a, b) => a.name.localeCompare(b.name))
   }
-  if (!day) rows.sort((a, b) => a.day - b.day || a.name.localeCompare(b.name))
-  else rows.sort((a, b) => a.name.localeCompare(b.name))
 
-  // Stats for summary cards
-  const uniqueEmployees = new Set(Object.keys(monthData)).size
-  const totalSubmissions = rows.length
-  const coverageByShift = {}
-  SHIFTS.forEach(s => {
-    coverageByShift[s.key] = new Set()
-    for (const [, days] of Object.entries(monthData)) {
-      for (let d = 1; d <= total; d++) {
-        if (days[d] && days[d][s.key]) coverageByShift[s.key].add(d)
-      }
-    }
-  })
-
-  const shiftBadge = { s24: styles.badge24, am: styles.badgeAm, pm: styles.badgePm }
-  const shiftLabel = { s24: '24-hr', am: 'AM', pm: 'PM' }
+  const selectedRotation = day ? getShiftRotationForYMD(ym, parseInt(day)) : null
 
   function exportCSV() {
-    const lines = ['Name,Day,Shift']
-    rows.forEach(r => r.shifts.forEach(s => lines.push(`${r.name},${r.day},${shiftLabel[s.key]}`)))
+    if (!day || !rows.length) return
+    const lines = ['Name,Shift']
+    rows.forEach(r => r.shifts.forEach(s => lines.push(`${r.name},${shiftLabel[s.key]}`)))
     const blob = new Blob([lines.join('\n')], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `ACFD_Availability_${ym}${day ? `_Day${day}` : ''}.csv`
+    a.download = `ACFD_Availability_${ym}_Day${day}.csv`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  function handleDayClick(d) {
+    setDay(prev => prev === String(d) ? '' : String(d))
   }
 
   return (
     <div className={styles.view}>
 
-      {/* Summary cards */}
-      <div className={styles.cards}>
-        <div className={styles.card}>
-          <div className={styles.cardLabel}>Employees submitted</div>
-          <div className={styles.cardVal}>{uniqueEmployees}</div>
-        </div>
-        <div className={styles.card}>
-          <div className={styles.cardLabel}>Days with 24-hr coverage</div>
-          <div className={styles.cardVal} style={{ color: '#9dc9f0' }}>{coverageByShift.s24.size}</div>
-        </div>
-        <div className={styles.card}>
-          <div className={styles.cardLabel}>Days with AM coverage</div>
-          <div className={styles.cardVal} style={{ color: '#9cd49b' }}>{coverageByShift.am.size}</div>
-        </div>
-        <div className={styles.card}>
-          <div className={styles.cardLabel}>Days with PM coverage</div>
-          <div className={styles.cardVal} style={{ color: '#d0a0ee' }}>{coverageByShift.pm.size}</div>
-        </div>
-      </div>
-
-      {/* Filters */}
+      {/* Filters row */}
       <div className={styles.filters}>
         <div className={styles.filterGroup}>
           <label className={styles.label}>Month</label>
           <div className="select-wrap">
-            <select value={ym} onChange={e => { setYm(e.target.value); setDay('') }}>
+            <select value={ym} onChange={e => setYm(e.target.value)}>
               {opts.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
             </select>
           </div>
         </div>
         <div className={styles.filterGroup}>
-          <label className={styles.label}>Day</label>
-          <div className="select-wrap">
-            <select value={day} onChange={e => setDay(e.target.value)}>
-              {dayOpts.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
-            </select>
-          </div>
-        </div>
-        <div className={styles.filterGroup}>
-          <label className={styles.label}>Shift</label>
+          <label className={styles.label}>Shift filter</label>
           <div className="select-wrap">
             <select value={shift} onChange={e => setShift(e.target.value)}>
               {SHIFT_OPTS.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
@@ -127,67 +90,104 @@ export default function ChiefView() {
         </div>
         <div className={styles.filterGroup} style={{ justifyContent: 'flex-end' }}>
           <label className={styles.label}>&nbsp;</label>
-          <button className={styles.exportBtn} onClick={exportCSV} disabled={!rows.length}>
+          <button className={styles.exportBtn} onClick={exportCSV} disabled={!day || !rows.length}>
             Export CSV
           </button>
         </div>
       </div>
 
-      {/* Results */}
-      <div className={styles.resultsHeader}>
-        <span style={{ color: 'var(--gold)' }}>{monthLabel(ym)}</span>
-        {' — '}
-        {day ? `Day ${day}` : 'All days'}
-        {' · '}
-        {shift ? SHIFT_OPTS.find(o => o.val === shift)?.label.split(' ')[0] : 'All shifts'}
-        {' — '}
-        <span style={{ color: 'var(--gold)' }}>{rows.length} record{rows.length !== 1 ? 's' : ''}</span>
-      </div>
-
-      {loading ? (
-        <div className={styles.empty}>Loading…</div>
-      ) : rows.length === 0 ? (
-        <div className={styles.empty}>
-          <div className={styles.emptyIcon}>📋</div>
-          <p>No availability data matches this filter.</p>
-          <p style={{ marginTop: 6, fontSize: 12, color: 'var(--hint)' }}>Employees submit via the "Employee Submission" tab.</p>
+      {/* Results panel — only shown when a day is selected */}
+      {!day ? (
+        <div className={styles.prompt}>
+          <div className={styles.promptIcon}>📅</div>
+          <p className={styles.promptText}>Select a date to view availability</p>
+          <p className={styles.promptSub}>Tap any day on the calendar below</p>
         </div>
       ) : (
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Name</th>
-              {!day && <th>Day</th>}
-              <th>Available Shifts</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i}>
-                <td>{r.name}</td>
-                {!day && <td className={styles.dayNum}>{r.day}</td>}
-                <td>
-                  {r.shifts.map(s => (
-                    <span key={s.key} className={`${styles.badge} ${shiftBadge[s.key]}`}>
-                      {shiftLabel[s.key]}
-                    </span>
+        <div className={styles.resultsPanel}>
+          <div className={styles.resultsHeader}>
+            <div className={styles.resultsTitle}>
+              <span className={styles.selectedDate}>
+                {monthLabel(ym).split(' ')[0]} {day}
+              </span>
+              <span className={`${styles.rotTag} ${styles['rot' + selectedRotation]}`}>
+                {selectedRotation}-shift
+              </span>
+              {shift && (
+                <span className={`${styles.badge} ${styles[shiftBadge[shift]]}`}>
+                  {shiftLabel[shift]} only
+                </span>
+              )}
+            </div>
+            <button className={styles.clearDay} onClick={() => setDay('')}>✕ Clear</button>
+          </div>
+
+          {loading ? (
+            <div className={styles.empty}>Loading…</div>
+          ) : rows.length === 0 ? (
+            <div className={styles.empty}>
+              <p>No availability submitted for this date yet.</p>
+            </div>
+          ) : (
+            <>
+              <div className={styles.countLine}>
+                {rows.length} member{rows.length !== 1 ? 's' : ''} available
+              </div>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Available shifts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r, i) => (
+                    <tr key={i}>
+                      <td>{r.name}</td>
+                      <td>
+                        {r.shifts.map(s => (
+                          <span key={s.key} className={`${styles.badge} ${styles[shiftBadge[s.key]]}`}>
+                            {shiftLabel[s.key]}
+                          </span>
+                        ))}
+                      </td>
+                    </tr>
                   ))}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
       )}
 
-      {/* Month overview mini-calendar */}
-      <div className={styles.divider} />
-      <div className={styles.overviewTitle}>Month at a glance — click a day to filter</div>
-      <MiniCalendar ym={ym} monthData={monthData} onDayClick={d => setDay(day === String(d) ? '' : String(d))} selectedDay={day} />
+      {/* Calendar */}
+      <div className={styles.calendarSection}>
+        <div className={styles.calendarTitle}>
+          {monthLabel(ym)} — tap a date
+        </div>
+        {loading ? (
+          <div className={styles.empty}>Loading…</div>
+        ) : (
+          <MiniCalendar
+            ym={ym}
+            monthData={monthData}
+            onDayClick={handleDayClick}
+            selectedDay={day}
+            shiftFilter={shift}
+          />
+        )}
+      </div>
+
+      {/* Subtle footer stats */}
+      <div className={styles.footerStats}>
+        {uniqueEmployees} member{uniqueEmployees !== 1 ? 's' : ''} submitted availability for {monthLabel(ym)}
+      </div>
+
     </div>
   )
 }
 
-function MiniCalendar({ ym, monthData, onDayClick, selectedDay }) {
+function MiniCalendar({ ym, monthData, onDayClick, selectedDay, shiftFilter }) {
   const total = daysInMonth(ym)
   const start = firstDayOfWeek(ym)
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -198,27 +198,42 @@ function MiniCalendar({ ym, monthData, onDayClick, selectedDay }) {
       {Array.from({ length: start }, (_, i) => <div key={`b${i}`} />)}
       {Array.from({ length: total }, (_, i) => {
         const d = i + 1
-        let c24 = 0, cam = 0, cpm = 0
+        let c24 = 0, cam = 0, cpm = 0, total_avail = 0
         Object.values(monthData).forEach(days => {
           if (!days[d]) return
           if (days[d].s24) c24++
           if (days[d].am) cam++
           if (days[d].pm) cpm++
         })
+
+        // Count based on shift filter
+        if (!shiftFilter) total_avail = Object.values(monthData).filter(days => days[d] && (days[d].s24 || days[d].am || days[d].pm)).length
+        else if (shiftFilter === 's24') total_avail = c24
+        else if (shiftFilter === 'am') total_avail = cam
+        else if (shiftFilter === 'pm') total_avail = cpm
+
         const isSelected = selectedDay === String(d)
+        const rotation = getShiftRotationForYMD(ym, d)
+        const hasData = total_avail > 0
+
         return (
           <div
             key={d}
-            className={`${styles.miniCell} ${isSelected ? styles.miniSelected : ''}`}
-            title={`Day ${d}: ${c24} 24-hr, ${cam} AM, ${cpm} PM`}
+            className={`${styles.miniCell} ${isSelected ? styles.miniSelected : ''} ${hasData ? styles.miniHasData : ''}`}
             onClick={() => onDayClick(d)}
           >
-            <div className={styles.miniNum}>{d}</div>
-            <div className={styles.miniBars}>
-              <div className={styles.miniBar} style={{ background: c24 ? `rgba(58,106,154,${Math.min(1, 0.3 + c24 * 0.15)})` : '#1a2030' }} />
-              <div className={styles.miniBar} style={{ background: cam ? `rgba(58,122,57,${Math.min(1, 0.3 + cam * 0.15)})` : '#1a2030' }} />
-              <div className={styles.miniBar} style={{ background: cpm ? `rgba(90,58,122,${Math.min(1, 0.3 + cpm * 0.15)})` : '#1a2030' }} />
+            <div className={styles.miniTop}>
+              <div className={styles.miniNum}>{d}</div>
+              <div className={`${styles.miniRotation} ${styles['rot' + rotation]}`}>{rotation}</div>
             </div>
+            <div className={styles.miniBars}>
+              <div className={styles.miniBar} style={{ background: c24 ? `rgba(26,96,184,${Math.min(1, 0.25 + c24 * 0.15)})` : 'var(--border)' }} />
+              <div className={styles.miniBar} style={{ background: cam ? `rgba(106,153,0,${Math.min(1, 0.25 + cam * 0.15)})` : 'var(--border)' }} />
+              <div className={styles.miniBar} style={{ background: cpm ? `rgba(26,96,184,${Math.min(1, 0.15 + cpm * 0.1)})` : 'var(--border)' }} />
+            </div>
+            {total_avail > 0 && (
+              <div className={styles.miniCount}>{total_avail}</div>
+            )}
           </div>
         )
       })}

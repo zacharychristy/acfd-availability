@@ -1,6 +1,19 @@
 .view { padding: 24px; max-width: 900px; margin: 0 auto; }
 
-.topRow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.topRow {
+  display: grid; grid-template-columns: 2fr 1fr;
+  gap: 16px; margin-bottom: 8px; align-items: end;
+}
+
+.nameRow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.namePreview {
+  font-size: 13px; color: var(--muted);
+  margin-bottom: 16px; padding: 8px 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; border-left: 3px solid var(--lime-dim);
+}
+.namePreview strong { color: var(--lime-text); font-weight: 600; }
 @media (max-width: 500px) { .topRow { grid-template-columns: 1fr; } }
 
 .field { display: flex; flex-direction: column; gap: 6px; }
@@ -45,6 +58,21 @@
   color: var(--muted); transition: all 0.1s;
 }
 .quickBtn:hover { color: var(--text); border-color: var(--border2); }
+
+.quickBtnA {
+  border-color: #4a3600 !important; color: #c8a030 !important;
+}
+.quickBtnA:hover { background: #2a1e00 !important; border-color: #6a5000 !important; }
+
+.quickBtnB {
+  border-color: var(--s24-on-brd) !important; color: var(--s24-on-txt) !important;
+}
+.quickBtnB:hover { background: var(--s24-on-bg) !important; }
+
+.quickBtnC {
+  border-color: var(--am-on-brd) !important; color: var(--am-on-txt) !important;
+}
+.quickBtnC:hover { background: var(--am-on-bg) !important; }
 .quickBtnDanger {
   font-size: 11px; padding: 5px 10px; border-radius: 5px;
   background: var(--surface); border: 1px solid #2a1010;
@@ -70,7 +98,39 @@
 }
 .dayCell:hover { border-color: var(--border2); }
 
-.dayNum { font-size: 12px; font-weight: 500; color: #b8c8b4; margin-bottom: 4px; text-align: center; }
+.dayCellTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.dayNum { font-size: 12px; font-weight: 500; color: #b8c8b4; }
+
+.rotationLegend {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 8px; flex-wrap: wrap;
+}
+.rotationLegendLabel {
+  font-size: 11px; color: var(--muted);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+}
+.rotationLegendNote { font-size: 11px; color: var(--hint); }
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 700;
+  width: 16px; height: 16px;
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  letter-spacing: 0;
+}
+
+/* A = amber/gold */
+.rotationA { background: #2a1e00; color: #c8a030; border: 1px solid #4a3600; }
+/* B = blue */
+.rotationB { background: var(--s24-on-bg); color: var(--s24-on-txt); border: 1px solid var(--s24-on-brd); }
+/* C = lime */
+.rotationC { background: var(--am-on-bg); color: var(--am-on-txt); border: 1px solid var(--am-on-brd); }
 
 .shiftBtns { display: flex; flex-direction: column; gap: 3px; }
 
