@@ -29,19 +29,16 @@ export default function EmployeeView() {
   const [submitting, setSubmitting] = useState(false)
   const [loadingPrev, setLoadingPrev] = useState(false)
 
-  // Derived full name — always properly formatted
   const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ')
 
   useEffect(() => {
     fetchKnownNames().then(setKnownNames)
   }, [])
 
-  // Reset calendar when month changes
   useEffect(() => {
     setSelections(buildEmptySelections(ym))
   }, [ym])
 
-  // Pre-fill if prior submission exists for this name + month
   useEffect(() => {
     if (!fullName) return
     let cancelled = false
@@ -61,13 +58,8 @@ export default function EmployeeView() {
     return () => { cancelled = true }
   }, [fullName, ym])
 
-  function handleFirstName(val) {
-    setFirstName(capitalize(val))
-  }
-
-  function handleLastName(val) {
-    setLastName(capitalize(val))
-  }
+  function handleFirstName(val) { setFirstName(capitalize(val)) }
+  function handleLastName(val) { setLastName(capitalize(val)) }
 
   function toggleShift(day, shiftKey) {
     setSelections(prev => ({
@@ -80,9 +72,9 @@ export default function EmployeeView() {
     setSelections(prev => {
       const next = { ...prev }
       const rotationDays = Object.keys(next).filter(d => getShiftRotationForYMD(ym, parseInt(d)) === rotation)
-      const anyOff = rotationDays.some(d => !next[d].s24 || !next[d].am || !next[d].pm)
+      const anyOff = rotationDays.some(d => !next[d].s24)
       rotationDays.forEach(d => {
-        next[d] = { s24: anyOff, am: anyOff, pm: anyOff }
+        next[d] = { ...next[d], s24: anyOff }
       })
       return next
     })
@@ -118,10 +110,12 @@ export default function EmployeeView() {
   const opts = monthOptions()
   const selectedCount = Object.values(selections).filter(d => d.s24 || d.am || d.pm).length
 
+  const rotLetterClass = { A: styles.rotLetterA, B: styles.rotLetterB, C: styles.rotLetterC }
+
   return (
     <div className={styles.view}>
 
-      {/* Name + Month row */}
+      {/* Name + Month */}
       <div className={styles.topRow}>
         <div className={styles.nameRow}>
           <div className={styles.field}>
@@ -130,7 +124,6 @@ export default function EmployeeView() {
               type="text"
               value={firstName}
               onChange={e => handleFirstName(e.target.value)}
-              placeholder="John"
               autoComplete="given-name"
               autoCapitalize="words"
             />
@@ -141,13 +134,11 @@ export default function EmployeeView() {
               type="text"
               value={lastName}
               onChange={e => handleLastName(e.target.value)}
-              placeholder="Smith"
               autoComplete="family-name"
               autoCapitalize="words"
             />
           </div>
         </div>
-
         <div className={styles.field}>
           <label className={styles.label}>Month</label>
           <div className="select-wrap">
@@ -157,13 +148,6 @@ export default function EmployeeView() {
           </div>
         </div>
       </div>
-
-      {/* Name preview — shows formatted full name once both fields filled */}
-      {firstName.trim() && lastName.trim() && (
-        <div className={styles.namePreview}>
-          Submitting as <strong>{fullName}</strong>
-        </div>
-      )}
 
       {loadingPrev && <div className={styles.loadingNote}>Loading your previous submission…</div>}
 
@@ -179,11 +163,11 @@ export default function EmployeeView() {
             ))}
           </div>
           <div className={styles.rotationLegend}>
-            <span className={styles.rotationLegendLabel}>Shift rotation:</span>
+            <span className={styles.rotationLegendLabel}>Rotation:</span>
             <span className={`${styles.rotationBadge} ${styles.rotationA}`}>A</span>
             <span className={`${styles.rotationBadge} ${styles.rotationB}`}>B</span>
             <span className={`${styles.rotationBadge} ${styles.rotationC}`}>C</span>
-            <span className={styles.rotationLegendNote}>shown on each date for reference</span>
+            <span className={styles.rotationLegendNote}>shown on each date</span>
           </div>
         </div>
         <div className={styles.quickActions}>
@@ -203,11 +187,9 @@ export default function EmployeeView() {
       {/* Calendar grid */}
       <div className={styles.calendar}>
         {DAYS_OF_WEEK.map(d => <div key={d} className={styles.dayHeader}>{d}</div>)}
-
         {Array.from({ length: startDay }, (_, i) => (
           <div key={`blank-${i}`} className={styles.blankCell} />
         ))}
-
         {Array.from({ length: total }, (_, i) => {
           const day = i + 1
           const sel = selections[day] || { s24: false, am: false, pm: false }
@@ -216,7 +198,7 @@ export default function EmployeeView() {
             <div key={day} className={styles.dayCell}>
               <div className={styles.dayCellTop}>
                 <div className={styles.dayNum}>{day}</div>
-                <div className={`${styles.rotationBadge} ${styles['rotation' + rotation]}`}>{rotation}</div>
+                <div className={`${styles.rotLetter} ${rotLetterClass[rotation]}`}>{rotation}</div>
               </div>
               <div className={styles.shiftBtns}>
                 {SHIFTS.map(s => (
@@ -234,11 +216,18 @@ export default function EmployeeView() {
         })}
       </div>
 
-      {/* Footer */}
+      {/* Footer — name confirmation + submit */}
       <div className={styles.footer}>
-        <span className={styles.countNote}>
-          {selectedCount > 0 ? `${selectedCount} day${selectedCount !== 1 ? 's' : ''} selected` : 'No days selected yet'}
-        </span>
+        <div className={styles.footerLeft}>
+          {firstName.trim() && lastName.trim() && (
+            <div className={styles.namePreview}>
+              Submitting as <strong>{fullName}</strong>
+            </div>
+          )}
+          <div className={styles.countNote}>
+            {selectedCount > 0 ? `${selectedCount} day${selectedCount !== 1 ? 's' : ''} selected` : 'No days selected yet'}
+          </div>
+        </div>
         <button
           className={styles.submitBtn}
           onClick={handleSubmit}
