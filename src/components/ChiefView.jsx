@@ -33,7 +33,6 @@ export default function ChiefView() {
   const total = daysInMonth(ym)
   const uniqueEmployees = new Set(Object.keys(monthData)).size
 
-  // Build result rows only when a day is selected
   const rows = []
   if (day) {
     const d = parseInt(day)
@@ -45,7 +44,13 @@ export default function ChiefView() {
       })
       if (matchedShifts.length) rows.push({ name: empName, shifts: matchedShifts })
     }
-    rows.sort((a, b) => a.name.localeCompare(b.name))
+    const shiftPriority = { s24: 0, am: 1, pm: 2 }
+    rows.sort((a, b) => {
+      const aPriority = Math.min(...a.shifts.map(s => shiftPriority[s.key]))
+      const bPriority = Math.min(...b.shifts.map(s => shiftPriority[s.key]))
+      if (aPriority !== bPriority) return aPriority - bPriority
+      return a.name.localeCompare(b.name)
+    })
   }
 
   const selectedRotation = day ? getShiftRotationForYMD(ym, parseInt(day)) : null
@@ -70,7 +75,6 @@ export default function ChiefView() {
   return (
     <div className={styles.view}>
 
-      {/* Filters row */}
       <div className={styles.filters}>
         <div className={styles.filterGroup}>
           <label className={styles.label}>Month</label>
@@ -96,7 +100,6 @@ export default function ChiefView() {
         </div>
       </div>
 
-      {/* Results panel — only shown when a day is selected */}
       {!day ? (
         <div className={styles.prompt}>
           <div className={styles.promptIcon}>📅</div>
@@ -160,7 +163,6 @@ export default function ChiefView() {
         </div>
       )}
 
-      {/* Calendar */}
       <div className={styles.calendarSection}>
         <div className={styles.calendarTitle}>
           {monthLabel(ym)} — tap a date
@@ -178,7 +180,6 @@ export default function ChiefView() {
         )}
       </div>
 
-      {/* Subtle footer stats */}
       <div className={styles.footerStats}>
         {uniqueEmployees} member{uniqueEmployees !== 1 ? 's' : ''} submitted availability for {monthLabel(ym)}
       </div>
@@ -206,7 +207,6 @@ function MiniCalendar({ ym, monthData, onDayClick, selectedDay, shiftFilter }) {
           if (days[d].pm) cpm++
         })
 
-        // Count based on shift filter
         if (!shiftFilter) total_avail = Object.values(monthData).filter(days => days[d] && (days[d].s24 || days[d].am || days[d].pm)).length
         else if (shiftFilter === 's24') total_avail = c24
         else if (shiftFilter === 'am') total_avail = cam
@@ -229,7 +229,7 @@ function MiniCalendar({ ym, monthData, onDayClick, selectedDay, shiftFilter }) {
             <div className={styles.miniBars}>
               <div className={styles.miniBar} style={{ background: c24 ? `rgba(26,96,184,${Math.min(1, 0.25 + c24 * 0.15)})` : 'var(--border)' }} />
               <div className={styles.miniBar} style={{ background: cam ? `rgba(106,153,0,${Math.min(1, 0.25 + cam * 0.15)})` : 'var(--border)' }} />
-              <div className={styles.miniBar} style={{ background: cpm ? `rgba(26,96,184,${Math.min(1, 0.15 + cpm * 0.1)})` : 'var(--border)' }} />
+              <div className={styles.miniBar} style={{ background: cpm ? `rgba(200,120,32,${Math.min(1, 0.25 + cpm * 0.15)})` : 'var(--border)' }} />
             </div>
             {total_avail > 0 && (
               <div className={styles.miniCount}>{total_avail}</div>
