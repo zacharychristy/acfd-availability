@@ -1,1 +1,7 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
 
+[[scheduled_functions]]
+  name = "keep-alive"
+  schedule = "0 0 */3 * *"
